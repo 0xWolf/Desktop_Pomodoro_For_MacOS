@@ -21,13 +21,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let screen = NSScreen.main else { return }
         let frame = screen.frame
 
+        // 初始位置先右上角
+        let windowWidth: CGFloat = 200
+        let windowHeight: CGFloat = 100
+        let x = frame.width - windowWidth - 20
+        let y = frame.height - windowHeight - 40
+
         window = NSWindow(
-            contentRect: NSRect(
-                x: frame.width - 220,
-                y: frame.height - 220,
-                width: 200,
-                height: 200
-            ),
+            contentRect: NSRect(x: x, y: y, width: windowWidth, height: windowHeight),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -38,9 +39,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.level = .screenSaver
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.ignoresMouseEvents = true
+        window.alphaValue = 0.3
 
         label = NSTextField(labelWithString: "")
-        label.font = NSFont.systemFont(ofSize: 64, weight: .bold)
+        label.font = NSFont.systemFont(ofSize: 48, weight: .bold)
         label.textColor = .systemRed
         label.alignment = .center
         label.frame = window.contentView!.bounds
@@ -61,21 +63,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func tick() {
         secondsRemaining -= 1
 
+        guard let screen = NSScreen.main else { return }
+
         if secondsRemaining <= 0 {
             if isBreakTime {
                 // 休息结束 → 重新进入工作阶段
                 isBreakTime = false
                 secondsRemaining = 15 * 60
-                window.alphaValue = 0.3   // 倒计时淡一点
+                // 移回右上角
+                moveWindow(to: .topRight, screen: screen)
+                window.alphaValue = 0.3
             } else {
                 // 工作结束 → 进入休息阶段
                 isBreakTime = true
                 secondsRemaining = 3 * 60
-                window.alphaValue = 1.0   // 提示明显一点
+                // 居中
+                moveWindow(to: .center, screen: screen)
+                window.alphaValue = 1.0
             }
         }
 
         updateDisplay()
+    }
+
+    enum WindowPosition {
+        case topRight
+        case center
+    }
+
+    func moveWindow(to position: WindowPosition, screen: NSScreen) {
+        let windowSize = window.frame.size
+        var newOrigin = CGPoint.zero
+
+        switch position {
+        case .topRight:
+            newOrigin = CGPoint(
+                x: screen.frame.width - windowSize.width - 20,
+                y: screen.frame.height - windowSize.height - 40
+            )
+        case .center:
+            newOrigin = CGPoint(
+                x: (screen.frame.width - windowSize.width) / 2,
+                y: (screen.frame.height - windowSize.height) / 2
+            )
+        }
+
+        window.setFrameOrigin(newOrigin)
     }
 
     func updateDisplay() {
@@ -89,6 +122,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// ===== 启动 App =====
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
